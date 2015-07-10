@@ -4,7 +4,7 @@
 // @namespace      http://blog.thrsh.net
 // @author         cecekpawon (THRSH)
 // @description    Download all soundcloud tracks
-// @version        1.0
+// @version        1.1
 // @updateURL      https://github.com/cecekpawon/Soundcloud-Downloader/raw/master/releases/Soundcloud-Downloader.meta.js
 // @downloadURL    https://github.com/cecekpawon/Soundcloud-Downloader/raw/master/releases/Soundcloud-Downloader.user.js
 // @require        http://code.jquery.com/jquery-latest.js
@@ -44,58 +44,143 @@ _this = scdlr.prototype = {
   chrome: navigator.userAgent.match(/webkit/i) ? true : false,
   wGet: "",
   prettyname_rgx: /[^a-z0-9\.,_\-\(\) ]/gi,
-  str_bin: "#!/bin/bash\n\n",
+
+  // Soundcloud Class
+  c_playlist_true: ".playlistShuffleToggle",
+  c_playlist_wrap: ".listenDetails__trackList",
+  c_playlist_item: ".trackListWithEdit__item",
+  c_playlist_compact: ".playlist",
+  c_sound_title: " .soundTitle__title",
+  c_sound_actions: " .soundActions",
+  c_detail_title: ".l-listen-hero",
+  c_about: ".l-about-top",
+  c_badge_item: ".soundBadgeList__item",
+  c_private: ".sc-label-private",
+  c_button: "sc-button",
+  c_button_download: "sc-button-download",
+  c_button_medium: "sc-button-medium",
+  c_button_small: "sc-button-small",
+  c_button_responsive: "sc-button-responsive",
+  c_button_group: "sc-button-group",
+  c_button_group_medium: "sc-button-group-medium",
+
+  // Script Class / Vars
+  c_parsed: "parsed",
+  c_dyn: "dyn",
+  v_sh: "sh",
+  v_bat: "bat",
+  v_hbang: "#!/bin/bash\n\n",
+  v_mime_bat: "application/x-msdos-program",
+  v_mime_sh: "application/x-sh",
+
+  l_128: "128",
+  l_dlext: "#Download bash ext",
+  l_wgetbtn: "WGET",
+  l_dlbatch: "Download Batch",
+  l_remaining: "remaining",
+  l_working: "working..",
+  l_RTMPdetected: "RTMP detected, let IDM handle this :))",
+
+  e_ta: "yod_textarea",
+  e_wget_wrap: "yod_wget_wrap",
+  e_wgetbtn: "yod_wget_btn",
+  e_sel_ext: "yod_sel_ext",
+  e_remaining: "yod_remaining",
+  e_dlbatch: "yod_dlbatch",
+
+  db_bash: "yod_bash",
+
+  a_data_token: "data-token",
+  a_data_url: "data-url",
+  a_data_title: "data-title",
+  a_data_rtmp: "data-rtmp",
+  a_data_downloadurl: "data-downloadurl",
+
+  // Script CSS
+  css: "\
+    #yod_textarea {width: 100%; margin-bottom: 10px; height: 100px; resize: vertical;}\
+    #yod_sel_ext {margin: 0 10px;}\
+    #yod_wget_wrap {width: 100%; margin: 20px 0; display: inline-block;}\
+    #yod_wget {text-indent: inherit;}\
+    #yod_remaining {margin-left: 10px}\
+  ",
 
   setValue: function(key, value) {
     localStorage.setItem(key, value);
-    return false;
   },
 
   getValue: function(key) {
-    var val = localStorage.getItem(key);
-    return val;
+    return localStorage.getItem(key);
+  },
+
+  log: function(s) {
+    console.log(s);
+  },
+
+  isset: function(v) {
+    return typeof v != 'undefined';
+  },
+
+  toAttr: function(a, s, c) {
+    if (!_this.isset(c)) c = "";
+    return a + s + c;
+  },
+
+  remAttr: function(a, s, c) {
+    if (!_this.isset(c)) c = "";
+    var reg = new RegExp("[" + s + c + "]", "g");
+    return s.replace(reg, "");
   },
 
   init: function(JQ) {
     _this.$ = JQ;
- 
-    var _private = _this.$(".sc-label-private");
+    _this.$("<style/>", {text: _this.css}).appendTo("head");
+  },
 
-    _this.v_yod_bash = _this.getValue("yod_bash") !== "sh" ? "bat" : "sh";
+  go: function() {
+    var _private = _this.$(_this.c_private);
 
-    _this.$(".soundActions").not(".parsed").each(function () {
+    _this.$(_this.c_sound_actions).not(_this.toAttr(".", _this.c_parsed)).each(function () {
       var par = _this.$(this),
-        sound = par.find(".sc-button-group:first");
+        sound = par.find(_this.toAttr(".", _this.c_button_group) + ":first");
 
-      par.addClass("parsed");
+      par.addClass(_this.c_parsed);
 
       if (_private.length && !sound.length) {
-        sound = _this.$("<div/>", {"class": "sc-button-group sc-button-group-medium", html: "<span></span>"}).appendTo(this);
+        sound = _this.$("<div/>", {
+          class: _this.c_button_group + " " + _this.c_button_group_medium,
+          html: "<span></span>"
+        }).appendTo(this);
       }
 
-      if (sound.length && sound.html() && !sound.parents(".playlist").length) {
+      if (sound.length && sound.html() && !sound.parents(_this.c_playlist_compact).length) {
         _this.addDownloadButton(sound);
       }
     });
-
-    _this.wget();
   },
 
   addDownloadButton: function(sound) {
-    var downloadLink = this.$("<button/>").html("128"),
-      par = sound.parents("[role=group], .soundBadgeList__item"),
-      anchor = par.find(".soundTitle__title"),
+    var downloadLink = this.$("<button/>").html(_this.l_128),
+      par = sound.parents("[role=group], " + _this.c_badge_item),
+      anchor = par.find(_this.c_sound_title),
       resolveUrl = null,
-      buttonClass = "sc-button sc-button-download sc-button-responsive sc-button-",
-      buttonClass_group = sound.attr("class");
+      buttonClass = _this.c_button + " " + _this.c_button_download + " " + _this.c_button_responsive + " ",
+      buttonClass_group = sound.attr("class"),
+      playlist_item = sound.parents(_this.c_playlist_item);
 
     if (!par.length) {
-      // Playlists
-      if (sound.parents(".l-main").find(".isPlaylist").length) {
-        anchor = sound.parents(".trackList__item").find(".trackItem__trackTitle");
+      // Playlists tracks
+      if (playlist_item.length) {
+        anchor = playlist_item.find("a");
       } else {
-      // Single Track
-        anchor = sound.parents(".l-main").find(".soundTitle .soundTitle__title");
+      // Detail
+        anchor = _this.$(_this.c_detail_title).find(_this.c_sound_title);
+
+        var is_playlist = _this.$(_this.c_playlist_true);
+
+        if (is_playlist.length) {
+          return _this.wget(is_playlist, anchor.text().trim());
+        }
       }
     }
 
@@ -103,137 +188,116 @@ _this = scdlr.prototype = {
 
     if (buttonClass_group.match(/medium/i)) {
       resolveUrl = document.location.href;
-      buttonClass += "medium";
+      buttonClass += _this.c_button_medium;
     } else {
       resolveUrl = "https://soundcloud.com" + anchor.attr("href");
-      buttonClass += "small";
+      buttonClass += _this.c_button_small;
     }
 
     var urlSplitArray = resolveUrl.split("/"),
       lastElement = urlSplitArray.pop(),
       secretToken = lastElement.match(/^s\-/i) ? lastElement : "";
 
-    downloadLink.attr({
-      title: "Download ",
-      //target: "_blank",
-      class: buttonClass,
-      "data-token": secretToken,
-      "data-url": resolveUrl
-    }).click(function () {
+    downloadLink.attr({title: _this.l_128, class: buttonClass})
+    .attr(_this.a_data_token, secretToken)
+    .attr(_this.a_data_url, resolveUrl)
+    .click(function () {
       _this.$(this).prop("disabled", true);
       _this.download(this);
       return false;
     });
 
-    if (sound.find("button").length)
+    if (sound.find("button").length) {
       sound.append(downloadLink);
-    else
+    } else {
       downloadLink.insertBefore(sound.children().last());
+    }
   },
 
   update_ta: function() {
-    var ta = _this.$("#yod_textarea");
+    var ta = _this.$(_this.toAttr("#", _this.e_ta));
     if (ta_val = ta.val()) {
       ta_val = ta_val.replace(/^([^(wget)]+)/i, "");
-      if (_this.v_yod_bash === "sh") {
-        ta_val = _this.str_bin + ta_val;
+      if (_this.v_yod_bash === _this.v_sh) {
+        ta_val = _this.v_hbang + ta_val;
       }
 
       ta.val(ta_val);
 
-      _this.update_downloadBatch(ta);
+      _this.downloadBatch(ta);
     }
   },
 
-  update_downloadBatch: function(ta) {
-    if (fn = _this.$(".soundTitle__title").html()) {
-      fn = fn.replace(_this.prettyname_rgx, "").trim();
-      _this.downloadBatch(ta, fn);
-    }
-  },
-
-  wget: function() {
+  wget: function(el, title) {
     if (
-      !_this.$(".l-main").find(".isPlaylist").length
-      || _this.$("#yod_wget_wrap").length
+      _this.$(_this.toAttr("#", _this.e_wget_wrap)).length
     ) return;
 
-    var wgetTarget = _this.$(".listenEngagement .sc-button-group");
+    var wgetTarget = el.parents(_this.c_about);
 
     if (wgetTarget.length) {
+      _this.v_yod_bash = _this.getValue(_this.db_bash) !== _this.v_sh ? _this.v_bat : _this.v_sh;
 
-      _this.v_yod_bash = _this.getValue("yod_bash") !== "sh" ? "bat" : "sh";
-
-      var sel_ext = _this.$("<select/>", {id: "yod_sel_ext", style: "margin: 0 10px;"})
-        .append(_this.$("<option/>", {value: "bat", html: ".bat"}))
-        .append(_this.$("<option/>", {value: "sh", html: ".sh"}))
+      var selExt = _this.$("<select/>", {id: _this.e_sel_ext, class: _this.c_dyn})
+        .append(_this.$("<option/>", {value: _this.v_bat, html: _this.toAttr(".", _this.v_bat)}))
+        .append(_this.$("<option/>", {value: _this.v_sh, html: _this.toAttr(".", _this.v_sh)}))
         .change(function(){
           _this.v_yod_bash = _this.$(this).val();
-          _this.setValue("yod_bash", _this.v_yod_bash);
+          _this.setValue(_this.db_bash, _this.v_yod_bash);
           _this.update_ta();
         });
 
-      sel_ext.find("option[value=\""+ _this.v_yod_bash +"\"]").attr("selected", "selected");
+      selExt.find("option[value=\"" + _this.v_yod_bash + "\"]").prop("selected", true);
 
-      _this.$("<div/>", {
-        id: "yod_wget_wrap",
-          style: "width: 100%; margin: 20px 0; display: inline-block;"
-      })
+      _this.$("<div/>", {id: _this.e_wget_wrap})
       .append(
         _this.$("<textarea/>", {
-          id: "yod_textarea",
-          style: "width: 100%; margin-bottom: 10px; height: 100px; resize: vertical;"
+          id: _this.e_ta,
+          "data-title": title.replace(_this.prettyname_rgx, "").trim()
         }).hide()
       )
       .append(
-        _this.$("<label/>", {id: "yod_sel_ext_label", "for": "yod_sel_ext", html: "#Download bash ext"})
-          .append(sel_ext)
+        _this.$("<label/>", {id: _this.e_sel_ext + "_label", "for": _this.e_sel_ext, html: _this.l_dlext})
+          .append(selExt)
       )
       .append(
         _this.$("<button/>", {
-          html: "WGET",
-          id: "yod_wget",
-          style: "text-indent: inherit;",
-          "class": "sc-button sc-sc-button-medium sc-button-responsive"
+          html: _this.l_wgetbtn,
+          id: _this.e_wgetbtn,
+          class: _this.c_dyn + " " + _this.c_button + " " + _this.c_button_responsive + " " + _this.c_button_medium
         })
         .click(function () {
-          var ta = _this.$("#yod_textarea"),
-            plist = _this.$(this).parents(".l-main").find("[data-token]").not("[data-rtmp]"),
-            remaining = _this.$("#yod_remaining"),
-            btnWGET = _this.$(this);
+          var ta = _this.$(_this.toAttr("#", _this.e_ta)),
+            plist = _this.$(_this.c_playlist_wrap).find("[" + _this.a_data_token + "]").not("[" + _this.a_data_rtmp + "]"),
+            remaining = _this.$(_this.toAttr("#", _this.e_remaining));
 
           _this.wGet = "";
 
-          btnWGET.prop("disabled", true);
-          _this.$("#yod_dlbatch").remove();
+          _this.$(_this.toAttr(".", _this.c_dyn)).prop("disabled", true);
+          _this.$(_this.toAttr("#", _this.e_dlbatch)).remove();
           _this.plist_length = parseInt(plist.length) || 0;
           ta.val("").hide();
-          remaining.html("working..");
+          remaining.html(_this.l_working);
 
           plist.each(function(){
-            if (ta) _this.download(this, btnWGET, ta, remaining);
+            if (ta) _this.download(this, ta, remaining);
           });
         })
       )
       .append(
         _this.$("<span/>", {
-          id: "yod_remaining",
-          style: "margin-left: 10px"
+          id: _this.e_remaining
         })
       )
-      .appendTo(wgetTarget.parent());
+      .appendTo(wgetTarget);
     }
   },
 
-  log: function(s) {
-    console.log(s);
-  },
-
-  download: function(el, btnWGET, ta, remaining) {
-    var btnDL = _this.$(el), secret_token = btnDL.attr("data-token");
+  download: function(el, ta, remaining) {
+    var btnDL = _this.$(el), secret_token = btnDL.attr(_this.a_data_token);
 
     _this.$.getJSON(_this.apiURL + "/resolve.json", {
-      url: btnDL.attr("data-url"),
+      url: btnDL.attr(_this.a_data_url),
       client_id: _this.clientId,
       secret_token: secret_token
     }, function (track) {
@@ -264,28 +328,28 @@ _this = scdlr.prototype = {
           _this.plist_length--;
 
           if (_this.plist_length <= 0) remaining.empty();
-          else remaining.html(_this.plist_length + " remaining");
+          else remaining.html(_this.plist_length + " " + _this.l_remaining);
 
           if (data.http_mp3_128_url) {
-            if (!_this.wGet && (_this.v_yod_bash === "sh")) _this.wGet += _this.str_bin;
+            if (!_this.wGet && (_this.v_yod_bash === _this.v_sh)) _this.wGet += _this.v_hbang;
             val = "wget -c -O \"" + trackTitle + "\" \"" + data.http_mp3_128_url.replace(/%/gi, "%%") + "\" --no-check-certificate\n\n";
             _this.wGet += val;
             ta.val(_this.wGet);
             if (_this.plist_length === 0) {
-              btnWGET.prop("disabled", false);
-              ta.show();
-              _this.update_downloadBatch(ta);
+              _this.$(_this.toAttr(".", _this.c_dyn)).prop("disabled", false);
+              ta.val(ta.val().trim()).show();
+              _this.downloadBatch(ta);
             }
           } else {
-            _this.log("RTMP detected, let IDM handle this :))");
-            btnDL.html("RTMP").prop("disabled", true).attr("data-rtmp", true).off();
+            _this.log(_this.l_RTMPdetected);
+            btnDL.html("RTMP").prop("disabled", true).attr(_this.a_data_rtmp, true).off();
           }
         } else {
           if (data.http_mp3_128_url) {
             _this.download128(data.http_mp3_128_url, trackTitle);
             btnDL.prop("disabled", false);
           } else {
-            _this.log("RTMP detected, let IDM handle this :))");
+            _this.log(_this.l_RTMPdetected);
             btnDL.html("RTMP").attr("disabled", true).off();
           }
         }
@@ -303,25 +367,24 @@ _this = scdlr.prototype = {
     el.get(0).dispatchEvent(clickEvent);
   },
 
-  downloadBatch: function(ta, fn) {
+  downloadBatch: function(ta) {
     window.URL = window.webkitURL || window.URL;
 
-    var mime = _this.v_yod_bash !== "sh" ? "application/x-msdos-program" : "application/x-sh",
+    var mime = _this.v_yod_bash !== _this.v_sh ? _this.v_mime_bat : _this.v_mime_sh,
       bb = new Blob([ta.val()], {type: mime}),
       href = window.URL.createObjectURL(bb),
-      ext = "." + _this.v_yod_bash;
+      fn = ta.attr(_this.a_data_title) + _this.toAttr(".", _this.v_yod_bash);
 
-    fn += ext;
-
-    _this.$("#yod_dlbatch").remove();
+    _this.$(_this.toAttr("#", _this.e_dlbatch)).remove();
 
     _this.$("<a/>", {
-      id: "yod_dlbatch",
+      id: _this.e_dlbatch,
       href: href,
-      html: "Download BATCH",
-      "download": fn,
-      "data-downloadurl": [mime, fn, href].join(":")
-    }).appendTo(ta.parent());
+      html: _this.l_dlbatch,
+      "download": fn
+    })
+    .attr(_this.a_data_downloadurl, [mime, fn, href].join(":"))
+    .appendTo(ta.parent());
   }
 };
 
@@ -332,6 +395,8 @@ function GM_wait() {
     var yodSncld = new scdlr(),
       JQ = $.noConflict(true);
 
+    yodSncld.init(JQ);
+
     document.addEventListener("DOMNodeInserted", function (event) {
       var cname, elmt = event.target;
 
@@ -340,7 +405,7 @@ function GM_wait() {
         if (
           (/(g\-box\-full|soundList__item|trackList|soundBadgeList__item)/i.test(cname))
         ) {
-          yodSncld.init(JQ);
+          yodSncld.go();
         }
       }
     }, false);

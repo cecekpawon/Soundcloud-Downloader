@@ -15,7 +15,7 @@ Improved:
 ```
 
 ## Install
-https://github.com/cecekpawon/Soundcloud-Downloader/raw/master/releases/Soundcloud-Downloader.user.js
+[Soundcloud-Downloader.user.js](https://github.com/cecekpawon/Soundcloud-Downloader/raw/master/releases/Soundcloud-Downloader.user.js)
 
 ## Dev
 
