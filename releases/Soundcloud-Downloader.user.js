@@ -4,7 +4,7 @@
 // @namespace      http://blog.thrsh.net
 // @author         cecekpawon (THRSH)
 // @description    Download all soundcloud tracks
-// @version        1.1
+// @version        1.2
 // @updateURL      https://github.com/cecekpawon/Soundcloud-Downloader/raw/master/releases/Soundcloud-Downloader.meta.js
 // @downloadURL    https://github.com/cecekpawon/Soundcloud-Downloader/raw/master/releases/Soundcloud-Downloader.user.js
 // @require        http://code.jquery.com/jquery-latest.js
@@ -36,10 +36,8 @@ var _this, scdlr = function(){};
 
 _this = scdlr.prototype = {
   $: {},
-  clientId: atob("YjQ1YjFhYTEwZjFhYzI5NDE5MTBhN2YwZDEwZjhlMjg="),
+  clientId: atob("MDJnVUpDMGhIMmN0MUVHT2NZWFFJelJGVTkxYzcyRWE="),
   apiURL: "https://api.soundcloud.com",
-  pipes: atob("aHR0cHM6Ly9waXBlcy55YWhvby5jb20vcGlwZXMvcGlwZS5ydW4/X2lkPWM0MjJmMzYwZDA1OGRmMDI3ODYxMGJjYTA5NjE1OWU5Jl9yZW5kZXI9anNvbiZ0cmFjaz0="),
-  pipes_FF: atob("aHR0cHM6Ly9xdWVyeS55YWhvb2FwaXMuY29tL3YxL3B1YmxpYy95cWw/cT1zZWxlY3QlMjAqJTIwZnJvbSUyMGpzb24lMjB3aGVyZSUyMHVybCUzRCUyMg=="),
   plist_length: 0,
   chrome: navigator.userAgent.match(/webkit/i) ? true : false,
   wGet: "",
@@ -48,7 +46,7 @@ _this = scdlr.prototype = {
   // Soundcloud Class
   c_playlist_true: ".playlistShuffleToggle",
   c_playlist_wrap: ".listenDetails__trackList",
-  c_playlist_item: ".trackListWithEdit__item",
+  c_playlist_item: ".trackList__item",
   c_playlist_compact: ".playlist",
   c_sound_title: " .soundTitle__title",
   c_sound_actions: " .soundActions",
@@ -69,7 +67,7 @@ _this = scdlr.prototype = {
   c_dyn: "dyn",
   v_sh: "sh",
   v_bat: "bat",
-  v_hbang: "#!/bin/bash\n\n",
+  v_hbang: "#!/bin/bash\n\ncd \"`dirname \"$0\"`\"\n\n",
   v_mime_bat: "application/x-msdos-program",
   v_mime_sh: "application/x-sh",
 
@@ -217,7 +215,8 @@ _this = scdlr.prototype = {
   update_ta: function() {
     var ta = _this.$(_this.toAttr("#", _this.e_ta));
     if (ta_val = ta.val()) {
-      ta_val = ta_val.replace(/^([^(wget)]+)/i, "");
+      var bash_patt = new RegExp(_this.v_hbang.replace(/\$/igm, "\\$"), "igm");
+      ta_val = ta_val.replace(bash_patt, "");
       if (_this.v_yod_bash === _this.v_sh) {
         ta_val = _this.v_hbang + ta_val;
       }
@@ -304,24 +303,14 @@ _this = scdlr.prototype = {
       var trackId = track.id.toString(),
         trackTitle = track.title.replace(_this.prettyname_rgx, "").trim() + ".mp3",
         trackTitle_enc = "&t=" + encodeURIComponent(trackTitle),
-        uri = _this.pipes + trackId;
-
-      if (secret_token) uri += "&secret_token=" + secret_token;
-      if (!_this.chrome) uri = _this.pipes_FF + encodeURIComponent(uri) + "%22&format=json&callback=";
-
-      _this.$.getJSON(uri, function (data) {
-        if (_this.chrome) {
-          data = _this.$.isArray(data.value.items) ? data.value.items[0] : {};
-        } else {
-          data = data.query.results.json.value.items ? data.query.results.json.value.items : {};
-        }
-
-        if (data.content) {
-          if (data.content.match(/\.128\.mp3\?/i)) {
-            data = {http_mp3_128_url: data.content};
-          } else if (data.content.match(/rtmp.*\/mp3:.*\.128\?/i)) {
-            data = {rtmp_mp3_128_url: data.content};
-          }
+        uri = _this.apiURL + "/i1/tracks/" + trackId + "/streams";
+            
+      _this.$.getJSON(uri, {
+        client_id: _this.clientId,
+        secret_token: secret_token
+      }, function (data) {
+        if (!(data.hasOwnProperty("http_mp3_128_url") && data.http_mp3_128_url.match(/\.128\.mp3\?/i))) {
+          data = { http_mp3_128_url: "" };
         }
 
         if (ta) {
