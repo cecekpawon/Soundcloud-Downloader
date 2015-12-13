@@ -4,7 +4,7 @@
 // @namespace      http://blog.thrsh.net
 // @author         cecekpawon (THRSH)
 // @description    Download all soundcloud tracks
-// @version        1.2
+// @version        1.3
 // @updateURL      https://github.com/cecekpawon/Soundcloud-Downloader/raw/master/releases/Soundcloud-Downloader.meta.js
 // @downloadURL    https://github.com/cecekpawon/Soundcloud-Downloader/raw/master/releases/Soundcloud-Downloader.user.js
 // @require        http://code.jquery.com/jquery-latest.js
@@ -65,16 +65,19 @@ _this = scdlr.prototype = {
   // Script Class / Vars
   c_parsed: "parsed",
   c_dyn: "dyn",
+  c_with_label: "with_label",
   v_sh: "sh",
   v_bat: "bat",
   v_hbang: "#!/bin/bash\n\ncd \"`dirname \"$0\"`\"\n\n",
   v_mime_bat: "application/x-msdos-program",
   v_mime_sh: "application/x-sh",
+  v_plindex: 0,
 
   l_128: "128",
   l_dlext: "#Download bash ext",
   l_wgetbtn: "WGET",
   l_dlbatch: "Download Batch",
+  l_plindex: "Tracks Number",
   l_remaining: "remaining",
   l_working: "working..",
   l_RTMPdetected: "RTMP detected, let IDM handle this :))",
@@ -85,8 +88,10 @@ _this = scdlr.prototype = {
   e_sel_ext: "yod_sel_ext",
   e_remaining: "yod_remaining",
   e_dlbatch: "yod_dlbatch",
+  e_plindex: "yod_plindex",
 
   db_bash: "yod_bash",
+  db_plindex: "yod_plindex",
 
   a_data_token: "data-token",
   a_data_url: "data-url",
@@ -97,10 +102,12 @@ _this = scdlr.prototype = {
   // Script CSS
   css: "\
     #yod_textarea {width: 100%; margin-bottom: 10px; height: 100px; resize: vertical;}\
-    #yod_sel_ext {margin: 0 10px;}\
+    #yod_sel_ext {margin: 0 0 10px 10px;}\
     #yod_wget_wrap {width: 100%; margin: 20px 0; display: inline-block;}\
     #yod_wget {text-indent: inherit;}\
     #yod_remaining {margin-left: 10px}\
+    .with_label {vertical-align: middle;display: inline-block; margin: auto 10px;}\
+    .with_label input {margin-right: 5px; margin-bottom: 2px;}\
   ",
 
   setValue: function(key, value) {
@@ -234,6 +241,8 @@ _this = scdlr.prototype = {
 
     var wgetTarget = el.parents(_this.c_about);
 
+    _this.v_plindex = parseInt(_this.getValue(_this.db_plindex)) ? 1 : 0;
+
     if (wgetTarget.length) {
       _this.v_yod_bash = _this.getValue(_this.db_bash) !== _this.v_sh ? _this.v_bat : _this.v_sh;
 
@@ -260,6 +269,16 @@ _this = scdlr.prototype = {
           .append(selExt)
       )
       .append(
+        _this.$("<label/>", {id: _this.e_plindex + "_label", "for": _this.e_plindex, class: _this.c_with_label})
+          .append(_this.$("<input/>", {id: _this.e_plindex, type: "checkbox", checked: _this.v_plindex ? "checked" : ""})
+              .click(function(){
+                _this.v_plindex = _this.$(this).prop("checked") ? 1 : 0;
+                _this.setValue(_this.db_plindex, _this.v_plindex);
+              })
+            )
+          .append(_this.l_plindex)
+      )
+      .append(
         _this.$("<button/>", {
           html: _this.l_wgetbtn,
           id: _this.e_wgetbtn,
@@ -278,8 +297,8 @@ _this = scdlr.prototype = {
           ta.val("").hide();
           remaining.html(_this.l_working);
 
-          plist.each(function(){
-            if (ta) _this.download(this, ta, remaining);
+          plist.each(function(i, e){
+            if (ta) _this.download(e, ta, remaining, _this.v_plindex ? (i+1) : 0);
           });
         })
       )
@@ -292,7 +311,7 @@ _this = scdlr.prototype = {
     }
   },
 
-  download: function(el, ta, remaining) {
+  download: function(el, ta, remaining, index) {
     var btnDL = _this.$(el), secret_token = btnDL.attr(_this.a_data_token);
 
     _this.$.getJSON(_this.apiURL + "/resolve.json", {
@@ -304,7 +323,7 @@ _this = scdlr.prototype = {
         trackTitle = track.title.replace(_this.prettyname_rgx, "").trim() + ".mp3",
         trackTitle_enc = "&t=" + encodeURIComponent(trackTitle),
         uri = _this.apiURL + "/i1/tracks/" + trackId + "/streams";
-            
+
       _this.$.getJSON(uri, {
         client_id: _this.clientId,
         secret_token: secret_token
@@ -321,7 +340,8 @@ _this = scdlr.prototype = {
 
           if (data.http_mp3_128_url) {
             if (!_this.wGet && (_this.v_yod_bash === _this.v_sh)) _this.wGet += _this.v_hbang;
-            val = "wget -c -O \"" + trackTitle + "\" \"" + data.http_mp3_128_url.replace(/%/gi, "%%") + "\" --no-check-certificate\n\n";
+            index = index ? index + ". " : "";
+            val = "wget -c -O \"" + index +  trackTitle + "\" \"" + data.http_mp3_128_url.replace(/%/gi, "%%") + "\" --no-check-certificate\n\n";
             _this.wGet += val;
             ta.val(_this.wGet);
             if (_this.plist_length === 0) {
