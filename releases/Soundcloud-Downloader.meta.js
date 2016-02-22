@@ -1,4 +1,4 @@
 // ==UserScript==
 // @name        Soundcloud Downloader
-// @version     1.3
+// @version     1.4
 // ==/UserScript==

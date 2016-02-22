@@ -4,7 +4,7 @@
 // @namespace      http://blog.thrsh.net
 // @author         cecekpawon (THRSH)
 // @description    Download all soundcloud tracks
-// @version        1.3
+// @version        1.4
 // @updateURL      https://github.com/cecekpawon/Soundcloud-Downloader/raw/master/releases/Soundcloud-Downloader.meta.js
 // @downloadURL    https://github.com/cecekpawon/Soundcloud-Downloader/raw/master/releases/Soundcloud-Downloader.user.js
 // @require        http://code.jquery.com/jquery-latest.js
@@ -81,6 +81,8 @@ _this = scdlr.prototype = {
   l_remaining: "remaining",
   l_working: "working..",
   l_RTMPdetected: "RTMP detected, let IDM handle this :))",
+  l_get128: "Get 128",
+  //l_128ready: "Mp3 link ready",
 
   e_ta: "yod_textarea",
   e_wget_wrap: "yod_wget_wrap",
@@ -89,6 +91,8 @@ _this = scdlr.prototype = {
   e_remaining: "yod_remaining",
   e_dlbatch: "yod_dlbatch",
   e_plindex: "yod_plindex",
+  e_a_128ready: "yod_a128ready",
+  e_btn_128ready: "yod_128ready",
 
   db_bash: "yod_bash",
   db_plindex: "yod_plindex",
@@ -108,6 +112,8 @@ _this = scdlr.prototype = {
     #yod_remaining {margin-left: 10px}\
     .with_label {vertical-align: middle;display: inline-block; margin: auto 10px;}\
     .with_label input {margin-right: 5px; margin-bottom: 2px;}\
+    .yod_a128ready {float: left; line-height: 0;}\
+    .yod_128ready {background-color: #F50;}\
   ",
 
   setValue: function(key, value) {
@@ -165,7 +171,7 @@ _this = scdlr.prototype = {
   },
 
   addDownloadButton: function(sound) {
-    var downloadLink = this.$("<button/>").html(_this.l_128),
+    var downloadLink = this.$("<button/>", {html: _this.l_128}),
       par = sound.parents("[role=group], " + _this.c_badge_item),
       anchor = par.find(_this.c_sound_title),
       resolveUrl = null,
@@ -203,7 +209,7 @@ _this = scdlr.prototype = {
       lastElement = urlSplitArray.pop(),
       secretToken = lastElement.match(/^s\-/i) ? lastElement : "";
 
-    downloadLink.attr({title: _this.l_128, class: buttonClass})
+    downloadLink.attr({title: _this.l_get128/*_this.l_128*/, class: buttonClass})
     .attr(_this.a_data_token, secretToken)
     .attr(_this.a_data_url, resolveUrl)
     .click(function () {
@@ -355,7 +361,7 @@ _this = scdlr.prototype = {
           }
         } else {
           if (data.http_mp3_128_url) {
-            _this.download128(data.http_mp3_128_url, trackTitle);
+            _this.download128(data.http_mp3_128_url, trackTitle, btnDL);
             btnDL.prop("disabled", false);
           } else {
             _this.log(_this.l_RTMPdetected);
@@ -368,12 +374,33 @@ _this = scdlr.prototype = {
     });
   },
 
+/*
   download128 : function(url, title) {
     var el = this.$("<a/>", {href: url, "download": title}),
       clickEvent  = document.createEvent('MouseEvents');
 
     clickEvent.initEvent('click', true, true);
     el.get(0).dispatchEvent(clickEvent);
+  },
+*/
+
+  download128 : function(url, title, btnDL) {
+    btnDL.replaceWith(
+      this.$("<a/>", {
+          "class": _this.e_a_128ready,
+          href: url,
+          "download": title,
+          title: /*_this.l_128ready*/ _this.l_128 + ": " + title,
+          target: "_blank"
+        })
+        .append(
+          this.$("<btn/>", {
+            "class": btnDL.attr("class"),
+            html: _this.l_128,
+          })
+          .addClass(_this.e_btn_128ready)
+        )
+      );
   },
 
   downloadBatch: function(ta) {
