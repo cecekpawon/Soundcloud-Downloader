@@ -26,6 +26,7 @@ Improved:
 - [Chrome](https://www.google.com/chrome/) *Ver 26.0.1410.64 above need [Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)*
 - [Firefox](https://www.mozilla.org/firefox) + [Greasemonkey](https://addons.mozilla.org/en-US/firefox/addon/greasemonkey/) / [Scriptish](https://addons.mozilla.org/en-US/firefox/addon/scriptish/)
 - [Opera](http://www.opera.com/) 15  / latests, need [Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)
+- [Safari](http://www.apple.com/safari/) 5  / latests, need [Tampermonkey](https://tampermonkey.net/?browser=safari)
 
 ## Features
 
