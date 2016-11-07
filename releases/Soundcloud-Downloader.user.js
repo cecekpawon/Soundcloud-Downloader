@@ -4,7 +4,7 @@
 // @namespace      http://blog.thrsh.net
 // @author         cecekpawon (THRSH)
 // @description    Download all soundcloud tracks
-// @version        1.4
+// @version        1.5
 // @updateURL      https://github.com/cecekpawon/Soundcloud-Downloader/raw/master/releases/Soundcloud-Downloader.meta.js
 // @downloadURL    https://github.com/cecekpawon/Soundcloud-Downloader/raw/master/releases/Soundcloud-Downloader.user.js
 // @require        http://code.jquery.com/jquery-latest.js
@@ -47,6 +47,7 @@ _this = scdlr.prototype = {
   c_playlist_true: ".playlistShuffleToggle",
   c_playlist_wrap: ".listenDetails__trackList",
   c_playlist_item: ".trackList__item",
+  c_playlist_item_number: ".trackItem__number",
   c_playlist_compact: ".playlist",
   c_sound_title: " .soundTitle__title",
   c_sound_actions: " .soundActions",
@@ -102,6 +103,7 @@ _this = scdlr.prototype = {
   a_data_title: "data-title",
   a_data_rtmp: "data-rtmp",
   a_data_downloadurl: "data-downloadurl",
+  a_data_plnumber: "data-plnumber",
 
   // Script CSS
   css: "\
@@ -177,12 +179,14 @@ _this = scdlr.prototype = {
       resolveUrl = null,
       buttonClass = _this.c_button + " " + _this.c_button_download + " " + _this.c_button_responsive + " ",
       buttonClass_group = sound.attr("class"),
-      playlist_item = sound.parents(_this.c_playlist_item);
+      playlist_item = sound.parents(_this.c_playlist_item),
+      pl_index = 0;
 
     if (!par.length) {
       // Playlists tracks
       if (playlist_item.length) {
         anchor = playlist_item.find("a");
+        pl_index = parseInt(playlist_item.find(_this.c_playlist_item_number).text());
       } else {
       // Detail
         anchor = _this.$(_this.c_detail_title).find(_this.c_sound_title);
@@ -212,6 +216,7 @@ _this = scdlr.prototype = {
     downloadLink.attr({title: _this.l_get128/*_this.l_128*/, class: buttonClass})
     .attr(_this.a_data_token, secretToken)
     .attr(_this.a_data_url, resolveUrl)
+    .attr(_this.a_data_plnumber, pl_index)
     .click(function () {
       _this.$(this).prop("disabled", true);
       _this.download(this);
@@ -276,7 +281,7 @@ _this = scdlr.prototype = {
       )
       .append(
         _this.$("<label/>", {id: _this.e_plindex + "_label", "for": _this.e_plindex, class: _this.c_with_label})
-          .append(_this.$("<input/>", {id: _this.e_plindex, type: "checkbox", checked: _this.v_plindex ? "checked" : ""})
+          .append(_this.$("<input/>", {id: _this.e_plindex, type: "checkbox", checked: _this.v_plindex ? true : false})
               .click(function(){
                 _this.v_plindex = _this.$(this).prop("checked") ? 1 : 0;
                 _this.setValue(_this.db_plindex, _this.v_plindex);
@@ -304,7 +309,7 @@ _this = scdlr.prototype = {
           remaining.html(_this.l_working);
 
           plist.each(function(i, e){
-            if (ta) _this.download(e, ta, remaining, _this.v_plindex ? (i+1) : 0);
+            if (ta) _this.download(e, ta, remaining, _this.$(e).attr(_this.a_data_plnumber));
           });
         })
       )
@@ -346,7 +351,7 @@ _this = scdlr.prototype = {
 
           if (data.http_mp3_128_url) {
             if (!_this.wGet && (_this.v_yod_bash === _this.v_sh)) _this.wGet += _this.v_hbang;
-            index = index ? index + ". " : "";
+            index = _this.v_plindex && index ? index + ". " : "";
             val = "wget -c -O \"" + index +  trackTitle + "\" \"" + data.http_mp3_128_url.replace(/%/gi, "%%") + "\" --no-check-certificate\n\n";
             _this.wGet += val;
             ta.val(_this.wGet);
