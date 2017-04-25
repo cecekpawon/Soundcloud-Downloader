@@ -4,7 +4,7 @@
 // @namespace      http://blog.thrsh.net
 // @author         cecekpawon (THRSH)
 // @description    Download all soundcloud tracks
-// @version        1.5
+// @version        1.6
 // @updateURL      https://github.com/cecekpawon/Soundcloud-Downloader/raw/master/releases/Soundcloud-Downloader.meta.js
 // @downloadURL    https://github.com/cecekpawon/Soundcloud-Downloader/raw/master/releases/Soundcloud-Downloader.user.js
 // @require        http://code.jquery.com/jquery-latest.js
@@ -36,7 +36,7 @@ var _this, scdlr = function(){};
 
 _this = scdlr.prototype = {
   $: {},
-  clientId: atob("MDJnVUpDMGhIMmN0MUVHT2NZWFFJelJGVTkxYzcyRWE="),
+  clientId: atob("Y1VhNDBPM0pnM0VtdnA2VHY0VTZ5bVlZTzUwTlVHcEo="),
   apiURL: "https://api.soundcloud.com",
   plist_length: 0,
   chrome: navigator.userAgent.match(/webkit/i) ? true : false,
@@ -53,7 +53,7 @@ _this = scdlr.prototype = {
   c_sound_actions: " .soundActions",
   c_detail_title: ".l-listen-hero",
   c_about: ".l-about-top",
-  c_badge_item: ".soundBadgeList__item",
+  c_badge_item: "soundBadgeList__item",
   c_private: ".sc-label-private",
   c_button: "sc-button",
   c_button_download: "sc-button-download",
@@ -153,11 +153,9 @@ _this = scdlr.prototype = {
   go: function() {
     var _private = _this.$(_this.c_private);
 
-    _this.$(_this.c_sound_actions).not(_this.toAttr(".", _this.c_parsed)).each(function () {
-      var par = _this.$(this),
-        sound = par.find(_this.toAttr(".", _this.c_button_group) + ":first");
-
-      par.addClass(_this.c_parsed);
+    _this.$(_this.c_sound_actions).not(_this.toAttr(".", _this.c_parsed))/**/.each(function () {
+      var soundact = _this.$(this),
+        sound = soundact.find(_this.toAttr(".", _this.c_button_group) + ":first");
 
       if (_private.length && !sound.length) {
         sound = _this.$("<div/>", {
@@ -167,19 +165,26 @@ _this = scdlr.prototype = {
       }
 
       if (sound.length && sound.html() && !sound.parents(_this.c_playlist_compact).length) {
-        _this.addDownloadButton(sound);
+        //pl_parsed = sound.find(_this.toAttr(".", _this.c_parsed));
+
+        //if (!pl_parsed.length) {
+        //if (!soundact.hasClass(_this.c_parsed)) {
+        //  soundact.addClass(_this.c_parsed);
+          _this.addDownloadButton(sound);
+        //}
       }
     });
   },
 
   addDownloadButton: function(sound) {
     var downloadLink = this.$("<button/>", {html: _this.l_128}),
-      par = sound.parents("[role=group], " + _this.c_badge_item),
+      par = sound.parents("[role=group], " + _this.toAttr(".", _this.c_badge_item)),
       anchor = par.find(_this.c_sound_title),
       resolveUrl = null,
       buttonClass = _this.c_button + " " + _this.c_button_download + " " + _this.c_button_responsive + " ",
       buttonClass_group = sound.attr("class"),
       playlist_item = sound.parents(_this.c_playlist_item),
+      soundact = sound.parents(_this.c_sound_actions),
       pl_index = 0;
 
     if (!par.length) {
@@ -213,20 +218,23 @@ _this = scdlr.prototype = {
       lastElement = urlSplitArray.pop(),
       secretToken = lastElement.match(/^s\-/i) ? lastElement : "";
 
-    downloadLink.attr({title: _this.l_get128/*_this.l_128*/, class: buttonClass})
-    .attr(_this.a_data_token, secretToken)
-    .attr(_this.a_data_url, resolveUrl)
-    .attr(_this.a_data_plnumber, pl_index)
-    .click(function () {
-      _this.$(this).prop("disabled", true);
-      _this.download(this);
-      return false;
-    });
+    downloadLink
+      .attr({title: _this.l_get128/*_this.l_128*/, class: buttonClass}) // + _this.toAttr(" ", _this.c_parsed)
+      .attr(_this.a_data_token, secretToken)
+      .attr(_this.a_data_url, resolveUrl)
+      .attr(_this.a_data_plnumber, pl_index)
+      .click(function () {
+        _this.$(this).prop("disabled", true);
+        _this.download(this);
+        return false;
+      });
+
+    soundact.addClass(_this.c_parsed);
 
     if (sound.find("button").length) {
       sound.append(downloadLink);
     } else {
-      downloadLink.insertBefore(sound.children().last());
+      downloadLink.insertAfter(sound.children().last());
     }
   },
 
@@ -443,9 +451,15 @@ function GM_wait() {
 
       if (!(/(CANVAS|DIV|LI)/.test(elmt.tagName))) return;
       if (cname = elmt.className) {
-        if (
-          (/(g\-box\-full|soundList__item|trackList|soundBadgeList__item)/i.test(cname))
-        ) {
+        regex = new RegExp([
+                    yodSncld.c_button_group,
+                    yodSncld.c_badge_item,
+                    "g-box-full",
+                    //"soundList__item",
+                    //"trackList"
+                  ].join("|"));
+
+        if (regex.test(cname)) {
           yodSncld.go();
         }
       }
